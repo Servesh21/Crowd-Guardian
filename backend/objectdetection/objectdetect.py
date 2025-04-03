@@ -5,8 +5,8 @@ import os
 import time
 from datetime import datetime
 import json
-from backend.app.models.videodata import insert_crowd_data  # Importing the insert function
-from backend.app.models.insertalertdata import insert_alert_data
+from app.models.videodata import insert_crowd_data  # Importing the insert function
+from app.models.insertalertdata import insert_alert_data
 
 # Load YOLOv8 model
 model = YOLO("../Yolo-Weights/yolov8l.pt")  # Ensure correct model path
@@ -23,7 +23,7 @@ LOCATION = "Gate A"  # Set the location for database entries
 os.makedirs(SAVE_ALERT_PATH, exist_ok=True)
 
 # Open video capture
-video_path = "3.mp4"
+video_path = "C:\Users\Hemant\OneDrive\Desktop\SAFECROWD MANAGER\backend\objectdetection\WhatsApp Video 2025-04-03 at 14.03.40_e59c2f05.mp4"  # Path to the video file
 cap = cv2.VideoCapture(video_path)
 
 if not cap.isOpened():

@@ -1,5 +1,5 @@
 from supabase import create_client, Client
-from backend.app.config import SUPABASE_URL, SUPABASE_API_KEY
+from app.config import SUPABASE_URL, SUPABASE_API_KEY
 from datetime import datetime
 
 # Initialize Supabase client

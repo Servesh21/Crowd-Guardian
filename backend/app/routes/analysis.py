@@ -1,55 +1,31 @@
-from fastapi import APIRouter, UploadFile, File
-import os
-from PIL import Image
-import cv2
-from ..models.crowd_detection import detect_crowd
-from ..models.congestion_predictor import predict_congestion
+from fastapi import APIRouter
+from app.services.map_processing import calculate_area_from_polygon, get_location_coordinates, get_place_polygon
+from objectdetection import objectdetect  # Assuming detection module exists
 
 router = APIRouter()
 
-# Temporary file save directory
-TEMP_DIR = "temp_files/"
+@router.get("/risk_analysis")
+def risk_analysis(location: str):
+    """
+    API endpoint to analyze crowd risk based on location.
+    """
+    lat, lng = get_location_coordinates(location)
+    bounds = get_place_polygon(location)
+    area = calculate_area_from_polygon(bounds)
+    
+    detected_people = objectdetect()  # Run detection
+    density = detected_people / area  # Calculate crowd density
 
-# Ensure the temporary directory exists
-os.makedirs(TEMP_DIR, exist_ok=True)
+    # risk_level = "Low"
+    # if density > 0.1: risk_level = "Medium"
+    # if density > 0.3: risk_level = "High"
 
-@router.post("/analyze")
-async def analyze_crowd(file: UploadFile = File(...), is_video: bool = False):
-    file_path = os.path.join(TEMP_DIR, file.filename)
-
-    # Save the uploaded file temporarily
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
-
-    if is_video:
-        # If the file is a video, process it frame by frame
-        video = cv2.VideoCapture(file_path)
-        frame_count = 0
-        while True:
-            ret, frame = video.read()
-            if not ret:
-                break
-
-            frame_count += 1
-            # Process the frame (can handle it differently if needed)
-            crowd_data = detect_crowd(frame)
-
-            # Predict congestion for this frame
-            congestion = predict_congestion(crowd_data)
-            
-            # You can return results for every frame or aggregate them (e.g., average congestion)
-            # For this example, we're returning just the results from the last frame
-            if frame_count == video.get(cv2.CAP_PROP_FRAME_COUNT):  # Process last frame
-                return {"frame_number": frame_count, "crowd_data": crowd_data, "predicted_congestion": congestion}
-
-        video.release()
-
-    else:
-        # If the file is an image, process it directly
-        image = Image.open(file_path)
-        crowd_data = detect_crowd(image)
-
-        # Predict congestion from the image data
-        congestion = predict_congestion(crowd_data)
-
-        return {"crowd_data": crowd_data, "predicted_congestion": congestion}
+    return {
+        "location": location,
+        "latitude": lat,
+        "longitude": lng,
+        "area_sqm": area,
+        "detected_people": detected_people,
+        "density": density,
+        # "risk_level": risk_level
+    }
