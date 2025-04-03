@@ -4,9 +4,12 @@ from email.mime.multipart import MIMEMultipart
 from twilio.rest import Client
 import os
 from dotenv import load_dotenv
+from flask import Flask, request, jsonify
 
 # Load environment variables from .env file
 load_dotenv()
+
+app = Flask(__name__)
 
 # Twilio Credentials
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -35,9 +38,9 @@ def send_email_alert(subject, message):
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
         server.quit()
-        print("Email alert sent successfully!")
+        return "Email alert sent successfully!"
     except Exception as e:
-        print("Error sending email:", e)
+        return f"Error sending email: {str(e)}"
 
 def send_sms_alert(message):
     """Send an SMS alert using Twilio."""
@@ -48,6 +51,19 @@ def send_sms_alert(message):
             from_=TWILIO_PHONE_NUMBER,
             to=ADMIN_PHONE_NUMBER
         )
-        print("SMS alert sent successfully!")
+        return "SMS alert sent successfully!"
     except Exception as e:
-        print("Error sending SMS:", e)
+        return f"Error sending SMS: {str(e)}"
+
+@app.route("/send_alerts", methods=["POST"])
+def send_alerts():
+    subject = "Crowd Alert: High Risk Detected"
+    message = "A high-density crowd has been detected. Immediate action is required!"
+
+    email_status = send_email_alert(subject, message)
+    sms_status = send_sms_alert(message)
+
+    return jsonify({"email_status": email_status, "sms_status": sms_status}), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)

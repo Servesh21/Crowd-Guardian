@@ -22,7 +22,7 @@ MAP_CENTER_LAT, MAP_CENTER_LON = 19.0760, 72.8777  # Example GPS coordinate for 
 os.makedirs(SAVE_ALERT_PATH, exist_ok=True)
 
 # Open video capture
-video_path = "1.mp4"
+video_path = "../app/1.mp4"
 cap = cv2.VideoCapture(video_path)
 
 if not cap.isOpened():

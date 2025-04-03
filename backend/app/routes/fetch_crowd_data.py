@@ -1,19 +1,26 @@
-from fastapi import APIRouter, HTTPException
+from flask import Blueprint, jsonify
 from supabase import create_client, Client
 from backend.app.config import SUPABASE_URL, SUPABASE_API_KEY
 
-router = APIRouter()
-
+# Create a Blueprint for crowd data routes
+crowd_bp = Blueprint("crowd", __name__)
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 
-@router.get("/crowd_data")
+
+@crowd_bp.route("/crowd_data", methods=["GET"])
 def get_crowd_data():
     try:
-        response = supabase.table("crowd_data").select("*").execute()
+        response = (
+            supabase.table("crowd_data")
+            .select("*")
+            .execute()  # Explicitly pass API key
+        )
+
+        print(response)
         if response.data:
-            return {"status": "success", "data": response.data}
+            return jsonify({"status": "success", "data": response.data}), 200
         else:
-            return {"status": "success", "data": []}
+            return jsonify({"status": "success", "data": []}), 200
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching crowd data: {e}")
+        return jsonify({"status": "error", "message": f"Error fetching crowd data: {str(e)}"}), 500

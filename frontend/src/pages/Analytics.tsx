@@ -12,7 +12,7 @@ const Analytics = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://localhost:8000/crowd_data");
+        const response = await fetch("http://localhost:5000/api/crowd/crowd_data");
         const data = await response.json();
         if (data.status === "success") {
           setCrowdData(data.data);
