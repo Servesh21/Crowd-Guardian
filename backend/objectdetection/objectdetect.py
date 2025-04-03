@@ -9,7 +9,7 @@ from backend.app.models.videodata import insert_crowd_data
 from backend.app.models.insertalertdata import insert_alert_data
 
 # Load YOLOv8 model
-model = YOLO("../Yolo-Weights/yolov8l.pt")
+model = YOLO("../app/Yolo-Weights/yolov8l.pt")
 
 # Constants
 GRID_SIZE = (3, 3)
