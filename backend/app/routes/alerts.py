@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from bavvapp.services.alerts import send_email_alert, send_sms_alert  # Import alert functions
+from backend.app.services.alerts  import send_email_alert, send_sms_alert  # Import alert functions
 
 router = APIRouter()
 

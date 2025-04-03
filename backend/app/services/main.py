@@ -1,6 +1,6 @@
 # main.py
 from fastapi import FastAPI
-from app.routes import alerts
+from backend.app.routes import alerts
 
 # from app.routes import analysis, alerts, admin
 # from backend.app.services.main import calculate_area
