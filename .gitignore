@@ -2,3 +2,4 @@
 .venv
 Yolo-Weights
 objectdetection/data
+Yolo-Weights/yolov8l.pt
