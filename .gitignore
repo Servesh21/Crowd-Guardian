@@ -1,7 +1,7 @@
 .idea
 .venv
 Yolo-Weights
-objectdetection/data
+backend/objectdetection/data
 Yolo-Weights/yolov8l.pt
 1.mp4
 .env
