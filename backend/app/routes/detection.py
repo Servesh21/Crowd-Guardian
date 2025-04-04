@@ -8,7 +8,7 @@ from datetime import datetime
 from threading import Lock
 from backend.app.models.videodata import insert_crowd_data
 from backend.app.models.insertalertdata import insert_alert_data
-from backend.app.routes.alerts import send_sms_alert
+from backend.app.routes.alerts import send_sms_alert, ADMIN_PHONE_NUMBER,send_alert
 
 # Load YOLOv8 model
 model = YOLO('yolov8l.pt')
@@ -138,7 +138,9 @@ def detect_crowd():
 
                     latitude, longitude = map_pixel_to_gps(x * grid_width, y * grid_height)
                     handle_alert(frame, f"{LOCATION} (Grid {x},{y})", x, y, grid_counts[y, x], density_per_sqm, latitude, longitude)
+                    send_alert('+917045973726', f"alert")
                     send_sms_alert(f"ALERT: High crowd density detected at {LOCATION}. Immediate action required!")
+
 
                 # Draw the grid cell and display the crowd count
                 cv2.rectangle(frame, (x * grid_width, y * grid_height),

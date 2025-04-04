@@ -63,21 +63,17 @@ from backend.app.config import SAFE_EXIT_ROUTES
 
 def send_alert(mobile_number, location):
     from twilio.rest import Client
-    print(mobile_number)
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    print(client)
-    print(mobile_number)
     exit_link ="https://maps.app.goo.gl/UbE1rPs6Y7CkPnFJ6",
-
     print(exit_link)
     message = f"🚨 URGENT: High crowd density detected at {location}. Please exit safely via this route: {exit_link}"
     print(message)
-    message = client.messages.create(
+    client.messages.create(
         body=message,
         from_=TWILIO_PHONE_NUMBER,
         to=mobile_number
     )
-    return message.sid
+    return "sms sent successfull"
 
 
 @alerts_bp.route('/send_alert', methods=['POST'])
