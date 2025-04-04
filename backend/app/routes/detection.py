@@ -131,15 +131,25 @@ def detect_crowd():
         with risk_lock:
             risk_level = new_risk
 
+        COOLDOWN_TIME = 120  # 2 minutes cooldown in seconds
+        last_alert_times = {}  # Dictionary to store last alert times for each grid cell
+
         for y in range(GRID_SIZE[0]):
             for x in range(GRID_SIZE[1]):
-                if grid_counts[y, x] > 5 and current_time - last_alert_times[y, x] > COOLDOWN_TIME:
-                    last_alert_times[y, x] = current_time
+                current_time = time.time()  # Get the current timestamp
+                cell_key = (y, x)  # Unique key for each grid cell
+
+                # If the grid cell has high density and the cooldown period has passed
+                if grid_counts[y, x] > 5 and (
+                        cell_key not in last_alert_times or current_time - last_alert_times[cell_key] > COOLDOWN_TIME):
+                    last_alert_times[cell_key] = current_time  # Update the last alert timestamp
+
                     latitude, longitude = map_pixel_to_gps(x * grid_width, y * grid_height)
-                    handle_alert(frame, f"{LOCATION} (Grid {x},{y})", x, y, grid_counts[y, x], density_per_sqm, latitude,
-                                 longitude)
+                    handle_alert(frame, f"{LOCATION} (Grid {x},{y})", x, y, grid_counts[y, x], density_per_sqm,
+                                 latitude, longitude)
                     send_sms_alert(f"ALERT: High crowd density detected at {LOCATION}. Immediate action required!")
 
+                # Draw the grid cell and display the crowd count
                 cv2.rectangle(frame, (x * grid_width, y * grid_height),
                               ((x + 1) * grid_width, (y + 1) * grid_height), (255, 0, 0), 2)
                 cv2.putText(frame, f"{grid_counts[y, x]}",
