@@ -41,15 +41,6 @@ const Index = () => {
   const [crowdData, setCrowdData] = useState<any>({});
 
   // Fetch camera data from backend
-  const fetchCameraData = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/detect/stream");
-      const data = await response.json();
-      setCameras(data.cameras || []);
-    } catch (err) {
-      console.error("Camera fetch failed", err);
-    }
-  };
 
   // Fetch latest crowd data from Supabase
   useEffect(() => {
@@ -75,9 +66,7 @@ const Index = () => {
   const isValidAlertLevel = (level: string): level is "low" | "medium" | "high" | "critical" =>
     ["low", "medium", "high", "critical"].includes(level);
 
-  useEffect(() => {
-    fetchCameraData();
-  }, []);
+
 
   useEffect(() => {
     const criticalOrHigh = alerts.filter(

@@ -8,7 +8,7 @@ from datetime import datetime
 from threading import Lock
 from backend.app.models.videodata import insert_crowd_data
 from backend.app.models.insertalertdata import insert_alert_data
-from backend.app.routes.alerts import send_sms_alert, ADMIN_PHONE_NUMBER,send_alert
+from backend.app.routes.alerts import send_sms_alert,send_alert
 
 # Load YOLOv8 model
 model = YOLO('yolov8l.pt')
@@ -69,8 +69,8 @@ def detect_crowd():
         alert_filename = os.path.join(SAVE_ALERT_PATH, f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
         cv2.imwrite(alert_filename, frame)
         print(f"[ALERT] High crowd density detected! Image saved: {alert_filename}")
-
-        risk = "Low" if density_per_sqm < 2 else "Medium" if density_per_sqm < 4 else "High"
+        global risk_level
+        risk_level = "Low" if density_per_sqm < 2 else "Medium" if density_per_sqm < 4 else "High"
 
         insert_alert_data(
             location=location,
@@ -80,7 +80,7 @@ def detect_crowd():
             image_path=alert_filename,
             people_count=int(people_count),
             density_per_sqm=float(density_per_sqm),
-            risk_level=risk,
+            risk_level=risk_level,
             latitude=latitude,
             longitude=longitude,
             timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -93,7 +93,7 @@ def detect_crowd():
             continue
 
         frame = cv2.resize(frame, (1920, 1080))
-        results = model(frame, conf=0.00000000001)
+        results = model(frame, conf=0.0001)
         grid_counts = np.zeros(GRID_SIZE, dtype=int)
         person_count = 0
         current_time = time.time()
@@ -129,25 +129,41 @@ def detect_crowd():
         with risk_lock:
             risk_level = new_risk
 
+        grid_area = compute_real_world_area(camera_height) / (GRID_SIZE[0] * GRID_SIZE[1])
+
         for y in range(GRID_SIZE[0]):
             for x in range(GRID_SIZE[1]):
-                cell_key = (y, x)  # Unique key for each grid cell
+                cell_key = (y, x)
+                people_in_cell = grid_counts[y, x]
+                cell_density = people_in_cell / grid_area if grid_area else 0
 
-                if grid_counts[y, x] > 5 and (cell_key not in last_alert_times or current_time - last_alert_times[cell_key] > COOLDOWN_TIME):
-                    last_alert_times[cell_key] = current_time  # Update the last alert timestamp
-
+                if cell_density > 2 and (
+                        cell_key not in last_alert_times or current_time - last_alert_times[cell_key] > COOLDOWN_TIME):
+                    last_alert_times[cell_key] = current_time
                     latitude, longitude = map_pixel_to_gps(x * grid_width, y * grid_height)
-                    handle_alert(frame, f"{LOCATION} (Grid {x},{y})", x, y, grid_counts[y, x], density_per_sqm, latitude, longitude)
-                    send_alert('+917045973726', f"alert")
-                    send_sms_alert(f"ALERT: High crowd density detected at {LOCATION}. Immediate action required!")
+
+                    handle_alert(
+                        frame,
+                        f"{LOCATION} (Grid {x},{y})",
+                        x,
+                        y,
+                        people_in_cell,
+                        cell_density,
+                        latitude,
+                        longitude
+                    )
+
+                    #send_sms_alert(f"ALERT: High crowd density detected at {LOCATION}. Immediate action required!")
+                    #send_alert('+919136669616', f"alert")
+
 
 
                 # Draw the grid cell and display the crowd count
                 cv2.rectangle(frame, (x * grid_width, y * grid_height),
-                              ((x + 1) * grid_width, (y + 1) * grid_height), (255, 0, 0), 2)
+                ((x + 1) * grid_width, (y + 1) * grid_height), (255, 0, 0), 2)
                 cv2.putText(frame, f"{grid_counts[y, x]}",
-                            (x * grid_width + 10, y * grid_height + 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                (x * grid_width + 10, y * grid_height + 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
         if time.time() - last_update_time >= 30:
             density_over_time.append(density_per_sqm)
