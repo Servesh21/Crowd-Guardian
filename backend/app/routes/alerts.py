@@ -52,3 +52,42 @@ def get_crowd_data():
             return jsonify({"status": "success", "data": []}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error fetching crowd data: {str(e)}"}), 500
+
+
+# alert_service.py
+# from twilio.rest import Client
+# from  import TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+from backend.app.config import SAFE_EXIT_ROUTES
+
+
+def send_alert(mobile_number, location):
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+
+    exit_link = "https://maps.google.com/?q=19.12345,72.98765"
+
+    message = f"🚨 URGENT: High crowd density detected at {location}. Please exit safely via this route: {exit_link}"
+
+    message = client.messages.create(
+        body=message,
+        from_=TWILIO_PHONE_NUMBER,
+        to=mobile_number
+    )
+    return message.sid
+
+
+@alerts_bp.route('/send_alert', methods=['POST'])
+def send_alert_route():
+    data = request.get_json()
+    mobile = data.get("mobile")
+    location = data.get("location")
+    print(data,mobile,location)
+    if not mobile or not location:
+        return jsonify({"error": "Mobile number and location required"}), 400
+
+    try:
+        sid = send_alert(mobile, location)
+        return jsonify({"status": "Alert sent", "sid": sid})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": str(e)}), 500
