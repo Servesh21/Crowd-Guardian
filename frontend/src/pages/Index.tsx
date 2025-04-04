@@ -184,15 +184,15 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <StatusCard
                 title="Current Crowd Density"
-                value={`${crowdData.crowdDensity || 0}%`}
-                description="Percentage of maximum safe density"
+                value={`${crowdData.density_per_sqm || 0}`}
+                description="Per Square Meter"
                 status={crowdData.riskLevel as "low" | "medium" | "high" | "critical"}
                 icon={<Users className="h-4 w-4" />}
               />
 
               <StatusCard
                 title="Risk Level"
-                value={crowdData.riskLevel?.toUpperCase() || "LOW"}
+                value={crowdData.risk_level?.toUpperCase()}
                 description="Based on crowd density and movement"
                 status={crowdData.riskLevel as "low" | "medium" | "high" | "critical"}
                 icon={<AlertTriangle className="h-4 w-4" />}
@@ -205,8 +205,8 @@ const Index = () => {
               >
                 <StatusCard
                   title="Current Occupancy"
-                  value={`${crowdData.occupancy || 0}/${crowdData.maxCapacity || 100}`}
-                  description={`${occupancyPercentage}% of maximum capacity`}
+                  value={`${crowdData.occupancy || 0}`}
+
                   status={
                     occupancyPercentage > 90
                       ? "critical"
