@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { useData } from "@/context/DataContext";
 import CrowdDensityMap from "@/components/CrowdDensityMap";
 import EvacuationRoutes from "@/components/EvacuationRoutes";
@@ -12,11 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@supabase/supabase-js";
 
 const MapPage = () => {
   const { cameras, metrics, alerts } = useData();
   const [mapView, setMapView] = useState<string>("heatmap");
   const { toast } = useToast();
+  const [crowdData, setCrowdData] = useState<any>({});
   
   // Get the most recent high or critical alert
   const criticalAlert = alerts
@@ -26,7 +28,30 @@ const MapPage = () => {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-  
+    useEffect(() => {
+    const fetchCrowdData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("crowd_data")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        if (data.length > 0) {
+          setCrowdData(data[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching crowd data:", error);
+      }
+    };
+
+    fetchCrowdData();
+  }, []);
+
+        const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY);
+
   // Time periods for historical view
   const timePeriods = [
     "Current", "Last hour", "Today", "Yesterday", "Last week"
@@ -73,8 +98,8 @@ const MapPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatusCard
           title="Current Crowd Density"
-          value={`${metrics.crowdDensity}%`}
-          description="Percentage of maximum safe density"
+          value={`${crowdData.density_per_sqm}`}
+          description="Density per square meter"
           status={metrics.riskLevel}
           icon={<MapPin className="h-4 w-4" />}
         />

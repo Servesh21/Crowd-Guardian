@@ -125,3 +125,6 @@ export {
   ToastClose,
   ToastAction,
 }
+
+export class toast {
+}

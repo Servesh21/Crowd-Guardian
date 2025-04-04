@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+ import { Megaphone } from "lucide-react";
+import { toast } from "@/components/ui/toast";
 import {
   Users,
   AlertTriangle,
@@ -6,7 +8,7 @@ import {
   MapPin,
   ArrowRight,
   BarChart4,
-  Megaphone,
+
 } from "lucide-react";
 import StatusCard from "@/components/StatusCard";
 import AlertBanner from "@/components/AlertBanner";
@@ -98,6 +100,39 @@ const Index = () => {
     ((crowdData.occupancy || 0) / (crowdData.maxCapacity || 100)) * 100
   );
 
+  const handleEmergencyBroadcast = () => {
+  // Show Toast Notification
+  toast({
+    title: "Broadcasting System",
+    description: "Emergency message broadcast initiated",
+  });
+
+  // Speech Synthesis
+  if ("speechSynthesis" in window) {
+    const message = new SpeechSynthesisUtterance("सभी नागरिकों को सूचित किया जाता है कि यह एक आपातकालीन स्थिति है। कृपया संयम बनाए रखें और आधिकारिक निर्देशों का पालन करें। सुरक्षा प्रोटोकॉल का पालन करते हुए निकटतम सुरक्षित स्थान पर पहुँचें। किसी भी अफवाह पर ध्यान न दें और आवश्यक सहायता के लिए संबंधित अधिकारियों से संपर्क करें।");
+
+    // Optional: Adjust Voice Settings
+    message.lang = "hi-IN"; // Set English language
+    message.rate = 1; // Normal speed
+    message.pitch = 1.2; // Normal pitch
+    message.volume = 1; // Max volume
+
+    // Chrome Fix: Stop previous speech before speaking
+    window.speechSynthesis.cancel();
+
+    // Speak the message
+    window.speechSynthesis.speak(message);
+  } else {
+    console.error("Speech Synthesis not supported in this browser.");
+  }
+};
+
+// // Inside your emergency button
+// <button onClick={handleEmergencyBroadcast} className="bg-red-500 text-white p-2 rounded">
+//   Emergency Broadcast
+// </button>
+
+
   const quickActions = [
     {
       title: "Monitor Cameras",
@@ -121,6 +156,7 @@ const Index = () => {
         toast({
           title: "Broadcasting System",
           description: "Emergency message broadcast initiated",
+          action: handleEmergencyBroadcast(),
         }),
       color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
     },

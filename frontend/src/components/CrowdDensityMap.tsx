@@ -65,28 +65,7 @@ const CrowdDensityMap = () => {
       
       // Identify danger zones
       const criticalPoints = points.filter(p => p.value > 70);
-      const zones: ZoneInfo[] = [
-        {
-          id: 'zone-1',
-          name: 'Main Gate',
-          status: criticalPoints.filter(p => p.x > 70 && p.y > 70).length > 5 ? 'danger' : 'warning',
-          density: 85
-        },
-        {
-          id: 'zone-2',
-          name: 'East Section',
-          status: criticalPoints.filter(p => p.x > 60 && p.y < 40).length > 3 ? 'danger' : 'safe',
-          density: 65
-        },
-        {
-          id: 'zone-3',
-          name: 'Food Court',
-          status: criticalPoints.filter(p => p.x < 50 && p.y > 60).length > 4 ? 'warning' : 'safe',
-          density: 55
-        }
-      ];
-      
-      setDangerZones(zones);
+
       
       return points;
     };
