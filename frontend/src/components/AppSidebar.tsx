@@ -1,17 +1,16 @@
-
 import { useState } from 'react';
-import { 
-  Bell, 
-  LayoutDashboard, 
-  MapPin, 
-  Settings, 
+import {
+  Bell,
+  LayoutDashboard,
+  MapPin,
+  Settings,
   Users,
   Search,
   Video
 } from 'lucide-react';
-import { 
-  Sidebar, 
-  SidebarContent, 
+import {
+  Sidebar,
+  SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -21,46 +20,46 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { 
-    title: 'Dashboard', 
+  {
+    title: 'Dashboard',
     icon: LayoutDashboard,
     url: '/'
   },
-  { 
-    title: 'Monitoring', 
+  {
+    title: 'Monitoring',
     icon: Video,
     url: '/monitoring'
   },
-  { 
-    title: 'Crowd Map', 
+  {
+    title: 'Crowd Map',
     icon: MapPin,
     url: '/map'
   },
-  { 
-    title: 'Alerts', 
+  {
+    title: 'Alerts',
     icon: Bell,
     url: '/alerts'
   },
-  { 
-    title: 'Analytics', 
+  {
+    title: 'Analytics',
     icon: Search,
     url: '/analytics'
   },
-  { 
-    title: 'Personnel', 
+  {
+    title: 'Personnel',
     icon: Users,
     url: '/personnel'
   },
-  { 
-    title: 'Settings', 
+  {
+    title: 'Settings',
     icon: Settings,
     url: '/settings'
   }
 ];
 
 export function AppSidebar() {
-  const [activeItem, setActiveItem] = useState('Dashboard');
-  
+  const [activeItem, setActiveItem] = useState();
+
   return (
     <Sidebar>
       <div className="flex flex-col items-center justify-center p-4 border-b border-border">
@@ -74,7 +73,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
+                  <SidebarMenuButton
                     className={activeItem === item.title ? "bg-secondary" : ""}
                     onClick={() => setActiveItem(item.title)}
                     asChild

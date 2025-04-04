@@ -71,9 +71,9 @@ def send_alert(mobile_number, location):
     client.messages.create(
         body=message,
         from_=TWILIO_PHONE_NUMBER,
-        to=mobile_number
+        to=ADMIN_PHONE_NUMBER
     )
-    return "sms sent successfull"
+    return "sms sent successfully"
 
 
 @alerts_bp.route('/send_alert', methods=['POST'])
