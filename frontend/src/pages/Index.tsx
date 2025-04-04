@@ -1,50 +1,98 @@
-
 import { useState, useEffect } from "react";
-import { Users, AlertTriangle, Bell, MapPin, ArrowRight, BarChart4, Megaphone } from "lucide-react";
+import {
+  Users,
+  AlertTriangle,
+  Bell,
+  MapPin,
+  ArrowRight,
+  BarChart4,
+  Megaphone,
+} from "lucide-react";
 import StatusCard from "@/components/StatusCard";
 import AlertBanner from "@/components/AlertBanner";
 import CameraFeed from "@/components/CameraFeed";
 import CrowdDensityMap from "@/components/CrowdDensityMap";
-import { useData, AlertLevel } from "@/context/DataContext";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { createClient } from "@supabase/supabase-js";
+
+// Supabase init
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const formatDate = (date: Date) => {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
 const Index = () => {
-  const { alerts, cameras, metrics } = useData();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [currentAlert, setCurrentAlert] = useState<{
-    title: string;
-    message: string;
-    level: AlertLevel;
-    time: string;
-  } | null>(null);
-  
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  // Show the most recent unread critical or high alert
+  const [alerts, setAlerts] = useState([]);
+  const [cameras, setCameras] = useState([]);
+  const [currentAlert, setCurrentAlert] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [crowdData, setCrowdData] = useState<any>({});
+
+  // Fetch camera data from backend
+  const fetchCameraData = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/detect/stream");
+      const data = await response.json();
+      setCameras(data.cameras || []);
+    } catch (err) {
+      console.error("Camera fetch failed", err);
+    }
+  };
+
+  // Fetch latest crowd data from Supabase
   useEffect(() => {
-    const criticalOrHighAlerts = alerts.filter(
+    const fetchCrowdData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("crowd_data")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        if (data.length > 0) {
+          setCrowdData(data[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching crowd data:", error);
+      }
+    };
+
+    fetchCrowdData();
+  }, []);
+
+  const isValidAlertLevel = (level: string): level is "low" | "medium" | "high" | "critical" =>
+    ["low", "medium", "high", "critical"].includes(level);
+
+  useEffect(() => {
+    fetchCameraData();
+  }, []);
+
+  useEffect(() => {
+    const criticalOrHigh = alerts.filter(
       (alert) => (alert.level === "critical" || alert.level === "high") && !alert.isRead
     );
-    
-    if (criticalOrHighAlerts.length > 0) {
-      const mostRecent = criticalOrHighAlerts[0];
+
+    if (criticalOrHigh.length > 0) {
+      const mostRecent = criticalOrHigh[0];
       setCurrentAlert({
         title: mostRecent.title,
         message: mostRecent.message,
         level: mostRecent.level,
-        time: formatDate(new Date(mostRecent.timestamp))
+        time: formatDate(new Date(mostRecent.timestamp)),
       });
-      
+
       if (mostRecent.level === "critical") {
         toast({
           title: "CRITICAL ALERT",
@@ -55,37 +103,38 @@ const Index = () => {
     } else {
       setCurrentAlert(null);
     }
-  }, [alerts, toast]);
+  }, [alerts]);
 
-  // Calculate occupancy percentage
-  const occupancyPercentage = Math.round((metrics.occupancy / metrics.maxCapacity) * 100);
-  
-  // Quick actions for crowd management
+  const occupancyPercentage = Math.round(
+    ((crowdData.occupancy || 0) / (crowdData.maxCapacity || 100)) * 100
+  );
+
   const quickActions = [
-    { 
-      title: "Monitor Cameras", 
-      description: "View all camera feeds", 
+    {
+      title: "Monitor Cameras",
+      description: "View all camera feeds",
       icon: <Bell className="h-5 w-5" />,
       action: () => navigate("/monitoring"),
-      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400" 
+      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
-    { 
-      title: "View Analytics", 
-      description: "Check crowd patterns", 
+    {
+      title: "View Analytics",
+      description: "Check crowd patterns",
       icon: <BarChart4 className="h-5 w-5" />,
       action: () => navigate("/analytics"),
-      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400" 
+      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
-    { 
-      title: "Emergency Broadcast", 
-      description: "Send public announcements", 
+    {
+      title: "Emergency Broadcast",
+      description: "Send public announcements",
       icon: <Megaphone className="h-5 w-5" />,
-      action: () => toast({
-        title: "Broadcasting System",
-        description: "Emergency message broadcast initiated",
-      }),
-      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400" 
-    }
+      action: () =>
+        toast({
+          title: "Broadcasting System",
+          description: "Emergency message broadcast initiated",
+        }),
+      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    },
   ];
 
   return (
@@ -95,28 +144,30 @@ const Index = () => {
           <Users className="h-6 w-6 text-primary" />
           <span>Crowd Guardian Dashboard</span>
         </h1>
-        
+
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-background/50">
             System Status: Active
           </Badge>
-          <Button 
-            size="sm" 
-            variant="outline" 
+          <Button
+            size="sm"
+            variant="outline"
             className="gap-1 group"
-            onClick={() => navigate('/alerts')}
+            onClick={() => navigate("/alerts")}
           >
             View All Alerts
             <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>
       </div>
-      
+
       {currentAlert && (
         <AlertBanner
           title={currentAlert.title}
           message={currentAlert.message}
-          level={currentAlert.level}
+          level={
+            isValidAlertLevel(currentAlert.level) ? currentAlert.level : "low"
+          }
           time={currentAlert.time}
         />
       )}
@@ -133,69 +184,80 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <StatusCard
                 title="Current Crowd Density"
-                value={`${metrics.crowdDensity}%`}
+                value={`${crowdData.crowdDensity || 0}%`}
                 description="Percentage of maximum safe density"
-                status={metrics.riskLevel}
+                status={crowdData.riskLevel as "low" | "medium" | "high" | "critical"}
                 icon={<Users className="h-4 w-4" />}
               />
-              
+
               <StatusCard
                 title="Risk Level"
-                value={metrics.riskLevel.toUpperCase()}
+                value={crowdData.riskLevel?.toUpperCase() || "LOW"}
                 description="Based on crowd density and movement"
-                status={metrics.riskLevel}
+                status={crowdData.riskLevel as "low" | "medium" | "high" | "critical"}
                 icon={<AlertTriangle className="h-4 w-4" />}
               />
-              
-              <div 
+
+              <div
                 className="relative"
-                onMouseEnter={() => setHoveredCard('occupancy')}
+                onMouseEnter={() => setHoveredCard("occupancy")}
                 onMouseLeave={() => setHoveredCard(null)}
               >
                 <StatusCard
                   title="Current Occupancy"
-                  value={`${metrics.occupancy}/${metrics.maxCapacity}`}
+                  value={`${crowdData.occupancy || 0}/${crowdData.maxCapacity || 100}`}
                   description={`${occupancyPercentage}% of maximum capacity`}
                   status={
-                    occupancyPercentage > 90 ? 'critical' :
-                    occupancyPercentage > 75 ? 'high' :
-                    occupancyPercentage > 50 ? 'medium' : 'low'
+                    occupancyPercentage > 90
+                      ? "critical"
+                      : occupancyPercentage > 75
+                      ? "high"
+                      : occupancyPercentage > 50
+                      ? "medium"
+                      : "low"
                   }
                   icon={<Users className="h-4 w-4" />}
                 />
-                {hoveredCard === 'occupancy' && (
+                {hoveredCard === "occupancy" && (
                   <div className="absolute -bottom-2 left-0 right-0 px-6 pb-4 transition-all">
-                    <Progress 
-                      value={occupancyPercentage} 
+                    <Progress
+                      value={occupancyPercentage}
                       className={`h-2 ${
-                        occupancyPercentage > 90 ? 'bg-alert-critical/20' :
-                        occupancyPercentage > 75 ? 'bg-alert-high/20' :
-                        occupancyPercentage > 50 ? 'bg-alert-medium/20' : 'bg-alert-low/20'
+                        occupancyPercentage > 90
+                          ? "bg-alert-critical/20"
+                          : occupancyPercentage > 75
+                          ? "bg-alert-high/20"
+                          : occupancyPercentage > 50
+                          ? "bg-alert-medium/20"
+                          : "bg-alert-low/20"
                       }`}
                     />
                   </div>
                 )}
               </div>
-              
+
               <StatusCard
                 title="Recent Incidents"
-                value={metrics.incidentCount}
+                value={crowdData.incidentCount || 0}
                 description="In the last 24 hours"
                 status={
-                  metrics.incidentCount > 5 ? 'critical' :
-                  metrics.incidentCount > 3 ? 'high' :
-                  metrics.incidentCount > 1 ? 'medium' : 'low'
+                  (crowdData.incidentCount || 0) > 5
+                    ? "critical"
+                    : (crowdData.incidentCount || 0) > 3
+                    ? "high"
+                    : (crowdData.incidentCount || 0) > 1
+                    ? "medium"
+                    : "low"
                 }
                 icon={<Bell className="h-4 w-4" />}
               />
             </div>
-            
-            {/* Quick Action Cards */}
+
             <div className="mb-6">
               <h3 className="text-sm font-medium mb-3">Quick Actions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {quickActions.map((action, index) => (
-                  <div 
+                  <div
                     key={index}
                     onClick={action.action}
                     className={`${action.color} p-4 rounded-lg cursor-pointer hover:bg-opacity-20 flex items-center gap-3 transition-all hover:scale-[1.02]`}
@@ -212,16 +274,16 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
         <CrowdDensityMap />
-        
+
         <div className="col-span-1 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <MapPin className="h-5 w-5" />
             <span>Active Camera Feeds</span>
           </h2>
-          
+
           <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2">
             {cameras.map((camera) => (
               <CameraFeed
@@ -236,7 +298,7 @@ const Index = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="border-t border-border pt-4 mt-6">
         <h3 className="text-sm text-muted-foreground">
           Crowd Guardian Alert System • Last updated: {new Date().toLocaleTimeString()}

@@ -89,7 +89,7 @@ while cap.isOpened():
         break
 
     frame = cv2.resize(frame, (1920, 1080))
-    results = model(frame, conf=0.00025)
+    results = model(frame, conf=0.00000025)
     grid_counts = np.zeros(GRID_SIZE, dtype=int)
     person_count = 0
     current_time = time.time()
