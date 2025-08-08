@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
-from flask import Blueprint, Response, jsonify
+from flask import Blueprint, Response, jsonify, request
 from ultralytics import YOLO
 import os
 import time
 from datetime import datetime
-from threading import Lock
+from threading import Lock, Thread
 from backend.app.models.videodata import insert_crowd_data
 from backend.app.models.insertalertdata import insert_alert_data
 from backend.app.routes.alerts import send_sms_alert,send_alert
@@ -30,17 +30,55 @@ risk_level = "Low"
 risk_lock = Lock()
 last_alert_times = {}  # Dictionary to store last alert times for each grid cell
 
-def detect_crowd():
+# Latest grid snapshot for real-time map
+grid_data_lock = Lock()
+last_grid_data = None
+
+# Background detection worker
+_bg_thread: Thread | None = None
+
+def _ensure_background_running():
+    global _bg_thread
+    if _bg_thread and _bg_thread.is_alive():
+        print("[DEBUG] Background thread already running")
+        return
+
+    print("[DEBUG] Starting background detection thread...")
+    def _runner():
+        # Consume the generator to keep updating last_grid_data
+        try:
+            print("[DEBUG] Background runner starting detect_crowd generator")
+            for frame_count, _ in enumerate(detect_crowd(None)):
+                # We don't need the frame bytes here; detect_crowd updates shared state
+                if frame_count % 30 == 0:  # Log every 30 frames
+                    print(f"[DEBUG] Background processed {frame_count} frames")
+        except Exception as e:
+            print(f"[ERROR] Background detection stopped: {e}")
+            import traceback
+            traceback.print_exc()
+
+    _bg_thread = Thread(target=_runner, daemon=True)
+    _bg_thread.start()
+    print(f"[DEBUG] Background thread started: {_bg_thread.is_alive()}")
+
+def detect_crowd(video_override: str | None = None):
     # Open video capture
-    video_path = "1.mp4"
+    if video_override:
+        video_path = video_override
+    else:
+        base_dir = os.path.dirname(os.path.dirname(__file__))  # backend/app
+        video_path = os.path.join(base_dir, "1.mp4")
+    
+    print(f"[DEBUG] Opening video: {video_path}")
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
-        print("Error: Cannot open video file!")
+        print(f"[ERROR] Cannot open video file: {video_path}")
         return
 
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
+    print(f"[DEBUG] Video opened successfully: {frame_width}x{frame_height}")
     grid_width = frame_width // GRID_SIZE[1]
     grid_height = frame_height // GRID_SIZE[0]
 
@@ -89,9 +127,11 @@ def detect_crowd():
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
+            print("[DEBUG] End of video, restarting...")
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Restart video
             continue
 
+        print("[DEBUG] Processing frame...")
         frame = cv2.resize(frame, (1920, 1080))
         results = model(frame, conf=0.0001)
         grid_counts = np.zeros(GRID_SIZE, dtype=int)
@@ -101,6 +141,7 @@ def detect_crowd():
         for result in results:
             boxes = result.boxes.xyxy
             classes = result.boxes.cls
+            print(f"[DEBUG] Found {len(boxes)} detections in frame")
 
             for i in range(len(boxes)):
                 if int(classes[i]) == 0:
@@ -124,6 +165,7 @@ def detect_crowd():
         REAL_WORLD_AREA = compute_real_world_area(camera_height)
         density_per_sqm = person_count / REAL_WORLD_AREA
         occupancy = person_count
+        print(f"[DEBUG] Frame stats - People: {person_count}, Density: {density_per_sqm:.2f}")
 
         new_risk = "Low" if density_per_sqm < 2 else "Medium" if density_per_sqm < 4 else "High"
         with risk_lock:
@@ -153,17 +195,26 @@ def detect_crowd():
                         longitude
                     )
 
-                    #send_sms_alert(f"ALERT: High crowd density detected at {LOCATION}. Immediate action required!")
-                    #send_alert('+919136669616', f"alert")
-
-
-
                 # Draw the grid cell and display the crowd count
                 cv2.rectangle(frame, (x * grid_width, y * grid_height),
-                ((x + 1) * grid_width, (y + 1) * grid_height), (255, 0, 0), 2)
+                              ((x + 1) * grid_width, (y + 1) * grid_height), (255, 0, 0), 2)
                 cv2.putText(frame, f"{grid_counts[y, x]}",
-                (x * grid_width + 10, y * grid_height + 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                            (x * grid_width + 10, y * grid_height + 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+
+        # Update shared grid snapshot for real-time map consumers
+        with grid_data_lock:
+            global last_grid_data
+            last_grid_data = {
+                "timestamp": datetime.now().isoformat(),
+                "grid_counts": grid_counts.tolist(),
+                "grid_size": {"rows": GRID_SIZE[0], "cols": GRID_SIZE[1]},
+                "frame": {"width": frame_width, "height": frame_height},
+                "people_count": int(person_count),
+                "density_per_sqm": float(density_per_sqm),
+                "risk_level": risk_level,
+            }
+            print(f"[DEBUG] last_grid_data SET: {last_grid_data}")
 
         if time.time() - last_update_time >= 30:
             density_over_time.append(density_per_sqm)
@@ -187,9 +238,45 @@ def detect_crowd():
 
 @detection_bp.route("/stream", methods=["GET"])
 def stream_video():
-    return Response(detect_crowd(), mimetype="multipart/x-mixed-replace; boundary=frame")
+    # Optional query param ?video=<filename> for an uploaded video in backend/app/uploads
+    video_param = request.args.get("video")
+    video_path = None
+    if video_param:
+        import os
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        upload_dir = os.path.join(base_dir, "uploads")
+        candidate = os.path.join(upload_dir, os.path.basename(video_param))
+        if os.path.isfile(candidate):
+            video_path = candidate
+    return Response(detect_crowd(video_path), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 @detection_bp.route("/risk-analysis", methods=["GET"])
 def get_risk_analysis():
     with risk_lock:
         return jsonify({"risk_level": risk_level})
+
+
+@detection_bp.route("/grid", methods=["GET"])
+def get_latest_grid():
+    # Returns the latest grid counts and metadata for the real-time density map
+    # Ensure background detection is running so we have live snapshots even if stream isn't open
+    print("[DEBUG] /grid endpoint called")
+    _ensure_background_running()
+    with grid_data_lock:
+        global last_grid_data
+        data = last_grid_data
+    print(f"[DEBUG] /grid endpoint sees last_grid_data: {data}")
+    if data is None:
+        print("[DEBUG] No grid data available yet, returning 202")
+        return jsonify({"status": "warming_up"}), 202
+    # Add data_age_seconds to response
+    from datetime import datetime
+    try:
+        ts = datetime.fromisoformat(data["timestamp"])
+        age = (datetime.now() - ts).total_seconds()
+    except Exception:
+        age = None
+    print(f"[DEBUG] Returning grid data with {data['people_count']} people, age: {age}")
+    resp = dict(data)
+    resp["data_age_seconds"] = age
+    return jsonify(resp)

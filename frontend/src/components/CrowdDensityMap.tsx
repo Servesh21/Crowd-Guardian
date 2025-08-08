@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fetchLatestGrid, GridSnapshot } from "@/api";
 
 type DensityPoint = {
   x: number;
@@ -20,7 +21,7 @@ type ZoneInfo = {
 };
 
 const CrowdDensityMap = () => {
-  // Generate random crowd density data for demonstration
+  // Real-time density points derived from backend grid
   const [densityData, setDensityData] = useState<DensityPoint[]>([]);
   const [timestamp, setTimestamp] = useState(new Date().toLocaleTimeString());
   const [selectedPoint, setSelectedPoint] = useState<DensityPoint | null>(null);
@@ -28,68 +29,44 @@ const CrowdDensityMap = () => {
   const [dangerZones, setDangerZones] = useState<ZoneInfo[]>([]);
   const [emergencyMode, setEmergencyMode] = useState(false);
   
-  // Generate random data points for the heatmap
+  // Poll backend grid and map to points for display
   useEffect(() => {
-    const generatePoints = () => {
+    let isMounted = true;
+    const toPoints = (snap: GridSnapshot): DensityPoint[] => {
+      const rows = snap.grid_size.rows;
+      const cols = snap.grid_size.cols;
       const points: DensityPoint[] = [];
-      
-      // Generate concentration in bottom right (high density area)
-      for (let i = 0; i < 15; i++) {
-        points.push({
-          x: Math.random() * 40 + 60, // 60-100%
-          y: Math.random() * 40 + 60, // 60-100%
-          value: Math.random() * 30 + 70, // 70-100
-          id: `critical-${i}`
-        });
+      const maxCount = Math.max(1, ...snap.grid_counts.flat());
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const count = snap.grid_counts[r][c];
+          // Map grid cell center to percentage positions
+          const x = ((c + 0.5) / cols) * 100;
+          const y = ((r + 0.5) / rows) * 100;
+          // Normalize count to 0-100 scale for value
+          const value = Math.min(100, Math.round((count / maxCount) * 100));
+          points.push({ x, y, value, id: `r${r}c${c}` });
+        }
       }
-      
-      // Generate medium density areas
-      for (let i = 0; i < 20; i++) {
-        points.push({
-          x: Math.random() * 70 + 15, // 15-85%
-          y: Math.random() * 70 + 15, // 15-85%
-          value: Math.random() * 30 + 40, // 40-70
-          id: `medium-${i}`
-        });
-      }
-      
-      // Generate low density scattered points
-      for (let i = 0; i < 30; i++) {
-        points.push({
-          x: Math.random() * 100, // 0-100%
-          y: Math.random() * 100, // 0-100%
-          value: Math.random() * 40, // 0-40
-          id: `low-${i}`
-        });
-      }
-      
-      // Identify danger zones
-      const criticalPoints = points.filter(p => p.value > 70);
-
-      
       return points;
     };
-    
-    // Initial data
-    setDensityData(generatePoints());
-    
-    // Update data every 5 seconds
-    const interval = setInterval(() => {
-      const newData = generatePoints();
-      setDensityData(newData);
-      setTimestamp(new Date().toLocaleTimeString());
-      
-      // Check for emergency conditions
-      const criticalPoints = newData.filter(p => p.value > 85);
-      if (criticalPoints.length > 10) {
-        setEmergencyMode(true);
-      } else {
-        setEmergencyMode(false);
+
+    const tick = async () => {
+      const snap = await fetchLatestGrid();
+      if (!isMounted) return;
+      if (snap) {
+        setDensityData(toPoints(snap));
+        setTimestamp(new Date(snap.timestamp).toLocaleTimeString());
+        // Emergency if global risk high or many high cells
+        const highCells = snap.grid_counts.flat().filter((n) => n > 5).length;
+        setEmergencyMode(snap.risk_level?.toLowerCase() === 'high' || highCells >= 3);
       }
-      
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    };
+
+    // Initial and poll
+    tick();
+    const interval = setInterval(tick, 3000);
+    return () => { isMounted = false; clearInterval(interval); };
   }, []);
 
   // Get color based on density value

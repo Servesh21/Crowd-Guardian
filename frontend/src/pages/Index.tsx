@@ -152,12 +152,13 @@ const Index = () => {
       title: "Emergency Broadcast",
       description: "Send public announcements",
       icon: <Megaphone className="h-5 w-5" />,
-      action: () =>
+      action: () => {
+        handleEmergencyBroadcast();
         toast({
           title: "Broadcasting System",
           description: "Emergency message broadcast initiated",
-          action: handleEmergencyBroadcast(),
-        }),
+        });
+      },
       color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
     },
   ];
@@ -306,7 +307,7 @@ const Index = () => {
         <div className="col-span-1 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            <span>Active Camera Feeds</span>
+            {/*<span>Active Camera Feeds</span>*/}
           </h2>
 
           <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2">
