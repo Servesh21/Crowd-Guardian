@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = "http://localhost:5000/api" || import.meta.env.BACKEND_URL;
 
 export const fetchAlerts = async () => {
   const response = await axios.get(`${BASE_URL}/alerts`);
