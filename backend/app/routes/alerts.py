@@ -1,7 +1,7 @@
 
 import os
 from supabase import create_client, Client
-from backend.app.config import SUPABASE_URL, SUPABASE_API_KEY
+from ..config import SUPABASE_URL, SUPABASE_API_KEY
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Blueprint
 

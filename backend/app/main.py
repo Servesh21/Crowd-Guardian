@@ -1,10 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
-from backend.app.routes.detection import detection_bp
-from backend.app.routes.alerts import alerts_bp
-from backend.app.routes.fetch_crowd_data import crowd_bp
-from backend.app.routes.heatmap import heatmap_bp
-from backend.app.routes.videos import videos_bp
+from routes.detection import detection_bp
+from routes.alerts import alerts_bp
+from routes.fetch_crowd_data import crowd_bp
+from routes.heatmap import heatmap_bp
+from routes.videos import videos_bp
 app = Flask(__name__)
 CORS(app)  # Allow frontend to make API calls
 
