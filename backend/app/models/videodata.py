@@ -1,8 +1,12 @@
 from supabase import create_client, Client
-from ..config import SUPABASE_URL,SUPABASE_API_KEY
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
 from datetime import datetime
 import json
-
+SUPABASE_URL =os.getenv('SUPABASE_URL')
+SUPABASE_API_KEY =os.getenv('SUPABASE_API_KEY')
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 

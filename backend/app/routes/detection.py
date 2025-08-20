@@ -6,9 +6,8 @@ import os
 import time
 from datetime import datetime
 from threading import Lock, Thread
-from ..models.videodata import insert_crowd_data
-from ..models.insertalertdata import insert_alert_data
-from backend.app.routes.alerts import send_sms_alert,send_alert
+from models.videodata import insert_crowd_data
+from models.insertalertdata import insert_alert_data
 
 # Load YOLOv8 model
 model = YOLO('yolov8l.pt')
