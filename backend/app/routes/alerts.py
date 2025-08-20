@@ -1,12 +1,14 @@
 
 import os
 from supabase import create_client, Client
-from ..config import SUPABASE_URL, SUPABASE_API_KEY
+
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Blueprint
 
 # Load environment variables from .env file
 load_dotenv()
+SUPABASE_URL =os.getenv('SUPABASE_URL')
+SUPABASE_API_KEY =os.getenv('SUPABASE_API_KEY')
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 # print(supabase.)
 alerts_bp = Blueprint("alerts", __name__)

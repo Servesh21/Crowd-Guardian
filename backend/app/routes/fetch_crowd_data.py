@@ -1,6 +1,11 @@
 from flask import Blueprint, jsonify
 from supabase import create_client, Client
-from ..config import SUPABASE_URL, SUPABASE_API_KEY
+from dotenv import load_dotenv
+
+load_dotenv()
+import os
+SUPABASE_URL =os.getenv('SUPABASE_URL')
+SUPABASE_API_KEY =os.getenv('SUPABASE_API_KEY')
 
 # Create a Blueprint for crowd data routes
 crowd_bp = Blueprint("crowd", __name__)
