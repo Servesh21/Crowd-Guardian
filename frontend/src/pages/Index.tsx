@@ -46,16 +46,42 @@ const Index = () => {
 
   // Fetch latest crowd data from Supabase
   useEffect(() => {
-    const fetchCrowdData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("crowd_data")
-          .select("*")
-          .order("timestamp", { ascending: false })
-          .limit(1);
-        if (error) throw error;
-        if (data.length > 0) {
-          setCrowdData(data[0]);
+import { SupabaseClient } from '@supabase/supabase-js';
+import { CrowdData } from '../types';
+
+// Extracted function to fetch crowd data from Supabase
+async function fetchLatestCrowdData(supabase: SupabaseClient): Promise<CrowdData | null> {
+  try {
+    const { data, error } = await supabase
+      .from("crowd_data")
+      .select("*")
+      .order("timestamp", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    if (data.length > 0) {
+      return data[0];
+    } else {
+      return null;
+    }
+  } catch (error: any) {
+    console.error("Error fetching crowd data:", error.message);
+    return null;
+  }
+}
+export default function Index() {
+  const [crowdData, setCrowdData] = useState<CrowdData | null>(null);
+
+  useEffect(() => {
+    fetchCrowdData();
+  }, []);
+
+  // Using the extracted function
+  const fetchCrowdData = async () => {
+    const data = await fetchLatestCrowdData(supabase);
+    if (data) {
+      setCrowdData(data);
+    }
+  };
         }
       } catch (error) {
         console.error("Error fetching crowd data:", error);

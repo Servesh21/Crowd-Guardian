@@ -18,15 +18,19 @@ const AlertBanner = ({ title, message, level, time }: AlertBannerProps) => {
 
   const getBgColor = () => {
     switch (level) {
-      case 'critical':
-        return 'bg-alert-critical animate-pulse-alert';
-      case 'high':
-        return 'bg-alert-high';
-      case 'medium':
-        return 'bg-alert-medium';
-      case 'low':
-      default:
-        return 'bg-alert-low';
+const getBackgroundClass = (severity: AlertSeverity): string => {
+  switch (severity) {
+    case 'critical':
+      return 'bg-alert-critical animate-pulse-alert';
+    case 'high':
+      return 'bg-alert-high';
+    case 'medium':
+      return 'bg-alert-medium';
+    case 'low':
+    default:
+      return 'bg-alert-low';
+  }
+};
     }
   };
 

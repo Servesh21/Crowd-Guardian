@@ -29,16 +29,27 @@ const MapPage = () => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
     useEffect(() => {
-    const fetchCrowdData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("crowd_data")
-          .select("*")
-          .order("timestamp", { ascending: false })
-          .limit(1);
-        if (error) throw error;
-        if (data.length > 0) {
-          setCrowdData(data[0]);
+import { SupabaseClient } from "@supabase/supabase-js";
+import { CrowdData } from "../types";
+
+// Extracted function to fetch the latest crowd data
+async function fetchLatestCrowdData(supabase: SupabaseClient): Promise<CrowdData | null> {
+  try {
+    const { data, error } = await supabase
+      .from("crowd_data")
+      .select("*")
+      .order("timestamp", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    if (data && data.length > 0) {
+      return data[0] as CrowdData;
+    }
+    return null;
+  } catch (error: any) {
+    console.error("Error fetching crowd data:", error.message);
+    return null;
+  }
+}
         }
       } catch (error) {
         console.error("Error fetching crowd data:", error);
