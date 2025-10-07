@@ -42,15 +42,19 @@ const CameraFeed = ({
 
   const getRiskBadgeColor = () => {
     switch (riskLevel) {
-      case 'critical':
-        return 'bg-alert-critical animate-pulse-alert';
-      case 'high':
-        return 'bg-alert-high';
-      case 'medium':
-        return 'bg-alert-medium';
-      case 'low':
-      default:
-        return 'bg-alert-low';
+const getAlertBackgroundClass = (severity: string): string => {
+  switch (severity) {
+    case 'critical':
+      return 'bg-alert-critical animate-pulse-alert';
+    case 'high':
+      return 'bg-alert-high';
+    case 'medium':
+      return 'bg-alert-medium';
+    case 'low':
+    default:
+      return 'bg-alert-low';
+  }
+};
     }
   };
 
